@@ -30,12 +30,19 @@ Benchmark_Club помогает:
 Benchmark_Club/
 
 app/
+
 init.py
+
 routes.py
+
 models.py
+
 forms.py
+
 utils.py
+
 achievements.py
+
 
 config.py
 requirements.txt
