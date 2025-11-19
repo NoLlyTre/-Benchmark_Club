@@ -83,8 +83,4 @@ set FLASK_APP=wsgi.py
 set FLASK_ENV=development
 flask run
 
-cpp
-Копировать код
-http://127.0.0.1:5000
-
 Dход через файл: wsgi.py
