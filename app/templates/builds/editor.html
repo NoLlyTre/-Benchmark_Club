@@ -1,0 +1,203 @@
+{% extends "base.html" %}
+
+{% if build %}
+  {% set page_title = 'Редактирование сборки' %}
+{% else %}
+  {% set page_title = 'Новая сборка' %}
+{% endif %}
+
+{% block title %}{{ page_title }} — Бенчмарк Клуб{% endblock %}
+
+{% block content %}
+  <section class="grid">
+    <h1>{{ page_title }}</h1>
+    <form method="post" class="form" enctype="multipart/form-data">
+      {{ form.hidden_tag() }}
+      <div class="form-group">
+        {{ form.title.label }}{{ form.title(class="input") }}
+        {% for error in form.title.errors %}<span class="error">{{ error }}</span>{% endfor %}
+      </div>
+      <div class="form-group">
+        {{ form.description.label }}{{ form.description(class="input input--textarea") }}
+        {% for error in form.description.errors %}<span class="error">{{ error }}</span>{% endfor %}
+      </div>
+      <div class="form-group">
+        {{ form.hardware_summary.label }}{{ form.hardware_summary(class="input input--textarea") }}
+        {% for error in form.hardware_summary.errors %}<span class="error">{{ error }}</span>{% endfor %}
+      </div>
+      <div class="form-group">
+        {{ form.tags.label }}{{ form.tags(class="input") }}
+        <small class="hint">{{ form.tags.description }}</small>
+        {% for error in form.tags.errors %}<span class="error">{{ error }}</span>{% endfor %}
+      </div>
+      {% if build and build.cover_image %}
+        <div class="form-group">
+          <label>Текущая обложка</label>
+          <div class="preview">
+            <img src="{{ url_for('media.uploaded_file', filename=build.cover_image) }}" alt="Обложка {{ build.title }}">
+          </div>
+        </div>
+      {% endif %}
+      <div class="form-group">
+        {{ form.cover_image.label }}{{ form.cover_image() }}
+        <small class="hint">До 8 МБ, форматы: JPG, PNG, GIF, WebP.</small>
+        {% for error in form.cover_image.errors %}<span class="error">{{ error }}</span>{% endfor %}
+      </div>
+      <div class="form-group checkbox">
+        {{ form.is_published() }} {{ form.is_published.label }}
+      </div>
+      <div class="form-group checkbox">
+        {{ form.publish_as_anonymous() }} {{ form.publish_as_anonymous.label }}
+        <small class="hint">Если включено, имя автора и ссылка на профиль скрываются.</small>
+      </div>
+      <section class="components-section">
+        <h2>Комплектующие и цены</h2>
+        <p class="hint">Укажите позиции и цены по магазинам DNS, Мегамаркет и М.Видео. Пустые строки будут пропущены.</p>
+        <div id="components-grid" class="components-grid" data-next-index="{{ form.components|length }}">
+          {% for entry in form.components %}
+            <fieldset class="component-form" data-index="{{ loop.index0 }}">
+              <legend>Позиция {{ loop.index }}</legend>
+              <div class="form-group">
+                {{ entry.form.name.label }}{{ entry.form.name(class="input") }}
+                {% for error in entry.form.name.errors %}<span class="error">{{ error }}</span>{% endfor %}
+              </div>
+              <div class="component-prices">
+                <div>
+                  {{ entry.form.dns_price.label }}{{ entry.form.dns_price(class="input price-input", min="0", step="0.01") }}
+                  {% for error in entry.form.dns_price.errors %}<span class="error">{{ error }}</span>{% endfor %}
+                  {{ entry.form.dns_url.label }}{{ entry.form.dns_url(class="input") }}
+                  {% for error in entry.form.dns_url.errors %}<span class="error">{{ error }}</span>{% endfor %}
+                </div>
+                <div>
+                  {{ entry.form.megamarket_price.label }}{{ entry.form.megamarket_price(class="input price-input", min="0", step="0.01") }}
+                  {% for error in entry.form.megamarket_price.errors %}<span class="error">{{ error }}</span>{% endfor %}
+                  {{ entry.form.megamarket_url.label }}{{ entry.form.megamarket_url(class="input") }}
+                  {% for error in entry.form.megamarket_url.errors %}<span class="error">{{ error }}</span>{% endfor %}
+                </div>
+                <div>
+                  {{ entry.form.mvideo_price.label }}{{ entry.form.mvideo_price(class="input price-input", min="0", step="0.01") }}
+                  {% for error in entry.form.mvideo_price.errors %}<span class="error">{{ error }}</span>{% endfor %}
+                  {{ entry.form.mvideo_url.label }}{{ entry.form.mvideo_url(class="input") }}
+                  {% for error in entry.form.mvideo_url.errors %}<span class="error">{{ error }}</span>{% endfor %}
+                </div>
+              </div>
+            </fieldset>
+          {% endfor %}
+        </div>
+        <button type="button" class="btn" id="add-component">Добавить комплектующее</button>
+      </section>
+      {{ form.submit(class="btn btn-accent") }}
+    </form>
+  </section>
+{% endblock %}
+
+{% block extra_scripts %}
+  {{ super() }}
+  <script>
+    // Валидация цен - не допускать отрицательные значения
+    function setupPriceValidation() {
+      const priceInputs = document.querySelectorAll('.price-input');
+      priceInputs.forEach((input) => {
+        // Устанавливаем min и step атрибуты
+        if (!input.hasAttribute('min')) {
+          input.setAttribute('min', '0');
+        }
+        if (!input.hasAttribute('step')) {
+          input.setAttribute('step', '0.01');
+        }
+
+        // Проверка при вводе
+        input.addEventListener('input', function() {
+          const value = parseFloat(this.value);
+          if (this.value !== '' && (isNaN(value) || value < 0)) {
+            this.setCustomValidity('Цена не может быть отрицательной');
+          } else {
+            this.setCustomValidity('');
+          }
+        });
+
+        // Проверка при потере фокуса
+        input.addEventListener('blur', function() {
+          const value = parseFloat(this.value);
+          if (this.value !== '' && value < 0) {
+            this.value = '';
+            this.setCustomValidity('');
+          }
+        });
+
+        // Проверка при отправке формы
+        input.addEventListener('invalid', function(e) {
+          const value = parseFloat(this.value);
+          if (this.value !== '' && (isNaN(value) || value < 0)) {
+            this.setCustomValidity('Цена не может быть отрицательной');
+          }
+        });
+      });
+    }
+
+    // Инициализация валидации при загрузке страницы
+    document.addEventListener('DOMContentLoaded', setupPriceValidation);
+
+    // Функция для копирования валидации в новые элементы
+    function applyValidationToNewInputs(input) {
+      if (input.classList.contains('price-input')) {
+        if (!input.hasAttribute('min')) {
+          input.setAttribute('min', '0');
+        }
+        if (!input.hasAttribute('step')) {
+          input.setAttribute('step', '0.01');
+        }
+
+        input.addEventListener('input', function() {
+          const value = parseFloat(this.value);
+          if (this.value !== '' && (isNaN(value) || value < 0)) {
+            this.setCustomValidity('Цена не может быть отрицательной');
+          } else {
+            this.setCustomValidity('');
+          }
+        });
+
+        input.addEventListener('blur', function() {
+          const value = parseFloat(this.value);
+          if (this.value !== '' && value < 0) {
+            this.value = '';
+            this.setCustomValidity('');
+          }
+        });
+      }
+    }
+
+    const addComponentButton = document.getElementById('add-component');
+    const componentsGrid = document.getElementById('components-grid');
+    if (addComponentButton && componentsGrid) {
+      addComponentButton.addEventListener('click', () => {
+        const nextIndex = Number(componentsGrid.dataset.nextIndex || 0);
+        const template = componentsGrid.querySelector('.component-form');
+        if (!template) return;
+        const clone = template.cloneNode(true);
+        clone.dataset.index = nextIndex;
+        clone.querySelector('legend').textContent = `Позиция ${nextIndex + 1}`;
+        clone.querySelectorAll('input').forEach((input) => {
+          const oldName = input.getAttribute('name');
+          if (!oldName) return;
+          const newName = oldName.replace(/components-\d+-/, `components-${nextIndex}-`);
+          const oldId = input.getAttribute('id');
+          input.setAttribute('name', newName);
+          input.setAttribute('id', newName);
+          input.value = '';
+          if (oldId) {
+            clone
+              .querySelectorAll(`label[for="${oldId}"]`)
+              .forEach((label) => label.setAttribute('for', newName));
+          }
+          // Применить валидацию к новым полям цен
+          applyValidationToNewInputs(input);
+        });
+        clone.querySelectorAll('.error').forEach((error) => error.remove());
+        componentsGrid.appendChild(clone);
+        componentsGrid.dataset.nextIndex = nextIndex + 1;
+      });
+    }
+  </script>
+{% endblock %}
+

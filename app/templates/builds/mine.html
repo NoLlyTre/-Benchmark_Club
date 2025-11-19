@@ -1,0 +1,39 @@
+{% extends "base.html" %}
+
+{% block title %}Мои сборки — Бенчмарк Клуб{% endblock %}
+
+{% block content %}
+  <section class="grid">
+    <div class="header-row">
+      <h1>Мои сборки</h1>
+      <a class="btn btn-accent" href="{{ url_for('builds.create') }}">Новая сборка</a>
+    </div>
+    <div class="cards-grid">
+      {% for build in builds %}
+        <article class="card">
+          {% if build.cover_image %}
+            <div class="card__media">
+              <img src="{{ url_for('media.uploaded_file', filename=build.cover_image) }}" alt="Обложка {{ build.title }}">
+            </div>
+          {% endif %}
+          <h3><a href="{{ url_for('builds.detail', build_id=build.id) }}">{{ build.title }}</a></h3>
+          <p>{{ build.description|truncate(160) }}</p>
+          <p class="card__meta">
+            Статус: {{ 'Опубликована' if build.is_published else 'Черновик' }} · Обновлено {{ build.updated_at.strftime('%d.%m.%Y') if build.updated_at else build.created_at.strftime('%d.%m.%Y') }}
+            {% if build.is_anonymous %} · Показана как анонимная{% endif %}
+          </p>
+          <div class="card__footer">
+            <a class="btn" href="{{ url_for('builds.edit', build_id=build.id) }}">Редактировать</a>
+            <form method="post" action="{{ url_for('builds.delete', build_id=build.id) }}" onsubmit="return confirm('Удалить сборку?')" class="inline">
+              {{ csrf_token() }}
+              <button class="btn btn-danger" type="submit">Удалить</button>
+            </form>
+          </div>
+        </article>
+      {% else %}
+        <p>Еще нет сохраненных сборок. <a href="{{ url_for('builds.create') }}">Создайте первую.</a></p>
+      {% endfor %}
+    </div>
+  </section>
+{% endblock %}
+

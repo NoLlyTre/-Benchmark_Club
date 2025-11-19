@@ -1,0 +1,150 @@
+{% extends "base.html" %}
+
+{% block title %}Мои бенчмарки — Бенчмарк Клуб{% endblock %}
+
+{% block content %}
+  <section class="grid">
+    <h1>Журнал тестов</h1>
+    <div class="cards-grid two-cols">
+      <article class="card">
+        <h2>Добавить результат</h2>
+        <form method="post" enctype="multipart/form-data">
+          {{ form.hidden_tag() }}
+          <div class="form-group">
+            {{ form.build_id.label }}{{ form.build_id(class="input") }}
+            {% for error in form.build_id.errors %}<span class="error">{{ error }}</span>{% endfor %}
+          </div>
+          <div class="form-group">
+            {{ form.custom_build_name.label }}{{ form.custom_build_name(class="input") }}
+            <small class="hint">Заполните, если тест выполнялся для сборки вне клуба.</small>
+            {% for error in form.custom_build_name.errors %}<span class="error">{{ error }}</span>{% endfor %}
+          </div>
+          <div class="form-group">
+            {{ form.benchmark_name.label }}{{ form.benchmark_name(class="input") }}
+            {% for error in form.benchmark_name.errors %}<span class="error">{{ error }}</span>{% endfor %}
+          </div>
+          <div class="form-group">
+            {{ form.score.label }}{{ form.score(class="input") }}
+            {% for error in form.score.errors %}<span class="error">{{ error }}</span>{% endfor %}
+          </div>
+          <div class="form-group">
+            {{ form.notes.label }}{{ form.notes(class="input input--textarea") }}
+            {% for error in form.notes.errors %}<span class="error">{{ error }}</span>{% endfor %}
+          </div>
+          <div class="form-group">
+            {{ form.screenshot.label }}{{ form.screenshot() }}
+            <small class="hint">По желанию приложите скриншот теста (до 8 МБ).</small>
+            {% for error in form.screenshot.errors %}<span class="error">{{ error }}</span>{% endfor %}
+          </div>
+          <div class="form-group checkbox">
+            {{ form.is_anonymous() }} {{ form.is_anonymous.label }}
+          </div>
+          {{ form.submit(class="btn btn-accent") }}
+        </form>
+      </article>
+      <article class="card">
+        <h2>Сборки для тестов</h2>
+        <div class="form-group">
+          <label for="build-filter">Фильтр по названию</label>
+          <input id="build-filter" type="text" class="input" placeholder="Например: Монстр">
+        </div>
+        <div class="table-responsive table-responsive--compact">
+          <table class="table table-hover" id="builds-table" data-select-target="{{ form.build_id.id }}">
+            <thead>
+              <tr>
+                <th>Название</th>
+                <th>Статус</th>
+                <th>Создано</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for build in available_builds %}
+                <tr data-build-id="{{ build.id }}" data-title="{{ build.title|lower }}">
+                  <td>{{ build.title }}</td>
+                  <td>
+                    {% if build.is_published %}Опубликована{% else %}Черновик{% endif %}
+                    {% if build.is_anonymous %}<span class="badge badge-muted">Анонимно</span>{% endif %}
+                  </td>
+                  <td>{{ build.created_at.strftime('%d.%m.%Y') }}</td>
+                </tr>
+              {% else %}
+                <tr>
+                  <td colspan="3">У вас пока нет сохранённых сборок.</td>
+                </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+        <p class="hint">Нажмите на строку, чтобы выбрать сборку. Значение автоматически подставится в форму.</p>
+      </article>
+    </div>
+
+    <article class="card">
+      <h2>История тестов</h2>
+      <ul class="benchmark-list">
+        {% for item in records %}
+          <li>
+            <div class="benchmark-header">
+              <div>
+                <strong>{{ item.build_name }}</strong> · {{ item.benchmark_name }} — {{ item.score }}
+                <span class="benchmark-date">{{ item.recorded_at.strftime('%d.%m.%Y') }}</span>
+                {% if item.is_anonymous %}<span class="badge badge-muted">Анонимно</span>{% endif %}
+                <p class="hint">Автор: {{ item.display_author_name() }}</p>
+              </div>
+              {% if item.screenshot_path %}
+                <div class="benchmark-media">
+                  <img src="{{ url_for('media.uploaded_file', filename=item.screenshot_path) }}" alt="Скриншот теста {{ item.benchmark_name }}">
+                </div>
+              {% endif %}
+            </div>
+            {% if item.notes %}<p>{{ item.notes }}</p>{% endif %}
+            <form method="post" action="{{ url_for('dashboard.delete_benchmark', benchmark_id=item.id) }}" onsubmit="return confirm('Удалить этот тест?')" style="margin-top: 0.75rem; display: inline-block;">
+              {{ csrf_token()|safe }}
+              <button type="submit" class="btn btn-danger">Удалить</button>
+            </form>
+          </li>
+        {% else %}
+          <li>Пока нет записей. Сохраните первый тест.</li>
+        {% endfor %}
+      </ul>
+    </article>
+  </section>
+{% endblock %}
+
+{% block extra_scripts %}
+  {{ super() }}
+  <script>
+    const filterInput = document.getElementById('build-filter');
+    const table = document.getElementById('builds-table');
+    if (filterInput && table) {
+      const rows = Array.from(table.querySelectorAll('tbody tr'));
+      const selectField = document.getElementById(table.dataset.selectTarget);
+      const highlight = (targetRow) => {
+        rows.forEach((row) => row.classList.toggle('is-selected', row === targetRow));
+      };
+      rows.forEach((row) => {
+        row.addEventListener('click', () => {
+          const buildId = row.dataset.buildId;
+          if (selectField) {
+            selectField.value = buildId;
+          }
+          highlight(row);
+        });
+      });
+      if (selectField && selectField.value) {
+        const current = rows.find((row) => row.dataset.buildId === selectField.value);
+        if (current) {
+          highlight(current);
+        }
+      }
+      filterInput.addEventListener('input', () => {
+        const query = filterInput.value.trim().toLowerCase();
+        rows.forEach((row) => {
+          const title = row.dataset.title || '';
+          row.style.display = title.includes(query) ? '' : 'none';
+        });
+      });
+    }
+  </script>
+{% endblock %}
+
