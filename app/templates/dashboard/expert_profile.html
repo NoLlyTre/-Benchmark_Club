@@ -1,0 +1,58 @@
+{% extends "base.html" %}
+
+{% block title %}{{ expert.display_name }} — Профиль эксперта{% endblock %}
+
+{% block content %}
+  <section class="grid">
+    <h1>{{ expert.display_name }}</h1>
+    <p class="card__meta">Участник с {{ expert.created_at.strftime('%d.%m.%Y') }}</p>
+    {% if expert.bio %}
+      <p>{{ expert.bio }}</p>
+    {% endif %}
+
+    <div class="cards-grid two-cols">
+      <article class="card highlight">
+        <h2>Статистика</h2>
+        <ul class="stat-list">
+          <li>Звание: {{ profile.title }}</li>
+          <li>Очки: {{ profile.points }}</li>
+          <li>Публикаций: {{ profile.published_builds }}</li>
+          <li>Подписчики: {{ profile.followers }}</li>
+        </ul>
+      </article>
+      <article class="card">
+        <h2>Достижения</h2>
+        <ul class="achievement-list">
+          {% for item in expert.achievements %}
+            <li><strong>{{ item.achievement.name }}</strong> — {{ item.achievement.description }}</li>
+          {% else %}
+            <li>Пока без достижений.</li>
+          {% endfor %}
+        </ul>
+      </article>
+    </div>
+  </section>
+
+  <section class="grid">
+    <h2>Публикации инженера</h2>
+    <div class="cards-grid">
+      {% for build in builds %}
+        <article class="card">
+          {% if build.cover_image %}
+            <div class="card__media">
+              <img src="{{ url_for('media.uploaded_file', filename=build.cover_image) }}" alt="Обложка {{ build.title }}">
+            </div>
+          {% endif %}
+          <h3><a href="{{ url_for('builds.detail', build_id=build.id) }}">{{ build.title }}</a></h3>
+          <p>{{ build.description|truncate(150) }}</p>
+          {% if build.is_anonymous %}
+            <p class="hint">Сборка опубликована анонимно.</p>
+          {% endif %}
+        </article>
+      {% else %}
+        <p>У этого автора пока нет опубликованных сборок.</p>
+      {% endfor %}
+    </div>
+  </section>
+{% endblock %}
+

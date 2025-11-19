@@ -1,0 +1,18 @@
+<header class="topbar">
+  <div class="topbar__inner container">
+    <a class="brand" href="{{ url_for('main.index') }}">Бенчмарк Клуб</a>
+    <nav class="nav">
+      <a href="{{ url_for('builds.catalog') }}">Каталог сборок</a>
+      {% if current_user.is_authenticated %}
+        <a href="{{ url_for('builds.mine') }}">Мои сборки</a>
+        <a href="{{ url_for('dashboard.overview') }}">Личный кабинет</a>
+        <a href="{{ url_for('dashboard.benchmarks') }}">Мои тесты</a>
+        <a href="{{ url_for('auth.logout') }}">Выход</a>
+      {% else %}
+        <a href="{{ url_for('auth.login') }}">Вход</a>
+        <a class="btn btn-accent" href="{{ url_for('auth.register') }}">Регистрация</a>
+      {% endif %}
+    </nav>
+  </div>
+</header>
+
